@@ -20,12 +20,14 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="$(MSBuildThisFileDirectory)src\Fifo.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)src\ZCL.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)src\ZDO.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)src\ZigbeeTF.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="$(MSBuildThisFileDirectory)src\Binary.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)src\Fifo.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)src\ZCL.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)src\ZDO.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)src\ZigbeeDefines.h" />
   </ItemGroup>
