@@ -74,13 +74,18 @@ EndpointList_t<nOfEndpoints> createEndpointList() {
 	sDescr->AppProfId = 0x0104;
 	sDescr->EndPoint = 0x01;
 	sDescr->AppDevVer = 0x00;
-	sDescr->AppNumInClusters = 1;
+	sDescr->AppNumInClusters = 5;
 	sDescr->AppNumOutClusters = 1;
 
-	cId_t* inCluster = new cId_t[1];
+	cId_t* inCluster = new cId_t[sDescr->AppNumInClusters];
 	inCluster[0] = 0x0000;
-	cOut_t* outCluster = new cId_t[1];
-	outCluster[0] = 0x0104;
+	inCluster[1] = 0x0003;
+	inCluster[2] = 0x0004;
+	inCluster[3] = 0x0005;
+	inCluster[4] = 0x0006;
+	cOut_t* outCluster = new cId_t[sDescr->AppNumOutClusters];
+	outCluster[0] = 0x0019;	
+
 
 	sDescr->pAppInClusterList = inCluster;
 	sDescr->pAppOutClusterList = outCluster;
@@ -93,29 +98,33 @@ EndpointList_t<nOfEndpoints> createEndpointList() {
 	sDescr = new SimpleDescriptor_t();
 	sDescr->AppDeviceId = 0x0100;
 	sDescr->AppProfId = 0x0104;
-	sDescr->EndPoint = 0x0F;
+	sDescr->EndPoint = 0x11;
 	sDescr->AppDevVer = 0x00;
-	sDescr->AppNumInClusters = 1;
+	sDescr->AppNumInClusters = 5;
 	sDescr->AppNumOutClusters = 1;
 
-	inCluster = new cId_t[1];
+	inCluster = new cId_t[sDescr->AppNumInClusters];
 	inCluster[0] = 0x0000;
-	outCluster = new cId_t[1];
-	outCluster[0] = 0x0104;
+	inCluster[1] = 0x0003;
+	inCluster[2] = 0x0004;
+	inCluster[3] = 0x0005;
+	inCluster[4] = 0x0006;
+	outCluster = new cOut_t[sDescr->AppNumOutClusters];
+	outCluster[0] = 0x0019;
+	
 
 	sDescr->pAppInClusterList = inCluster;
 	sDescr->pAppOutClusterList = outCluster;
 
 	EndPointDesc_t ep2;
-	ep1.flags = 0x00;
-	ep1.endPoint = sDescr->EndPoint;
-	ep1.simpleDesc = sDescr;
+	ep2.flags = 0x00;
+	ep2.endPoint = sDescr->EndPoint;
+	ep2.simpleDesc = sDescr;
+
 
 	EndpointList_t<2> epList;
 	epList.endpoints[0] = ep1;
 	epList.endpoints[1] = ep2;
-
-	
 
 	return epList;
 

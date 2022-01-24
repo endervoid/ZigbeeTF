@@ -46,15 +46,34 @@ PACKED_STRUCT SIMPLE_DESC_RESP_HEADER{
 template<int nOfEndpoints>
 struct ZDOHandler {
 	EndpointList_t<nOfEndpoints>* _endpoints;
-
+	XBeeAddress64 remoteAddr64;
+	uint16_t remoteAddr16;
+	uint16_t clusterId;
+	uint16_t profileId;
+	uint8_t srcEndpoint;
+	uint8_t dstEndpoint;
 	void setEndpointList(EndpointList_t<nOfEndpoints>* endpoints) {
 		_endpoints = endpoints;
+		SerialDebug.print(F("Number of Endpoints: "));
+		SerialDebug.println(_endpoints->number);
+		printHex(SerialDebug, _endpoints->endpoints[0].endPoint);
+		SerialDebug.println();
+		printHex(SerialDebug, _endpoints->endpoints[1].endPoint);
+		SerialDebug.println();
+		SerialDebug.println(_endpoints->endpoints[0].simpleDesc->AppNumInClusters);
+		
 	};
 	
 
 	void handleRequest(ZBExplicitRxResponse& rx, XBeeWithCallbacks& xbee) {
+		remoteAddr64 = rx.getRemoteAddress64();
+		remoteAddr16 = rx.getRemoteAddress16();
+		clusterId = rx.getClusterId();
+		profileId = rx.getProfileId();
+		srcEndpoint = rx.getSrcEndpoint();
+		dstEndpoint = rx.getDstEndpoint();
 		{
-			auto clusterId = rx.getClusterId();
+						
 			switch (clusterId) {
 			case ZDO_CLUST_ACTIVE_EP_REQ:
 				handleActEPReq(rx, xbee);
@@ -130,23 +149,14 @@ struct ZDOHandler {
 	};
 	void handleSimpleDescReq(ZBExplicitRxResponse& rx, XBeeWithCallbacks& xbee)
 
-	{
-		XBeeAddress64 remoteAddr64 = rx.getRemoteAddress64();
-		uint16_t remoteAddr16 = rx.getRemoteAddress16();
-		auto clusterId = rx.getClusterId();
-		auto profileId = rx.getProfileId();
-		auto srcEndpoint = rx.getSrcEndpoint();
-		auto dstEndpoint = rx.getDstEndpoint();
-
-		//TODO: maybe use buffer for safety when length doesnt match type
-
+	{		
 		Buffer b(rx.getData(), rx.getDataLength());
 
 
 		if (b.len() != sizeof(SIMPLE_DESC_REQ)) {
 			SerialDebug.println(F("ERROR: buffer len mismatch"));
 			SerialDebug.print(b.len());
-			SerialDebug.print("!=");
+			SerialDebug.print(F("!="));
 			SerialDebug.print(sizeof(SIMPLE_DESC_REQ));
 			SerialDebug.println();
 			return;
@@ -173,86 +183,44 @@ struct ZDOHandler {
 		SerialDebug.print(F(")"));
 		SerialDebug.println();
 
+		//Find Endpoint
+		//_endpoints->endpoints[0].simpleDesc->AppNumInClusters;
+		EndPointDesc_t* epList = _endpoints->endpoints;
+		EndPointDesc_t endpoint;
+		bool found = false;
 
-
-		uint8_t inputClusterCount = 1;
-		uint8_t outputClusterCount = 1;
-
-		uint8_t clusterListLength = (2 + inputClusterCount * 2 + outputClusterCount * 2);
-		uint8_t totalLength = sizeof(SIMPLE_DESCR_HEADER) + sizeof(SIMPLE_DESC_RESP_HEADER) + clusterListLength;
-
-		uint8_t* payload = new uint8_t[totalLength];
-		SIMPLE_DESC_RESP_HEADER* resp_header = (SIMPLE_DESC_RESP_HEADER*)&payload[0];
-		SIMPLE_DESCR_HEADER* desc_header = (SIMPLE_DESCR_HEADER*)&payload[sizeof(SIMPLE_DESC_RESP_HEADER)];
-
-		desc_header->Endpoint = req->EndPoint;
-
-
-		desc_header->ApplicationProfileIdentifier = 0x0104;// 41440;// 0x0014;
-
-		desc_header->ApplicationDeviceIdentifier = 0x0100; //97;// 0x0014;
-
-		desc_header->ApplicationDeviceVersion = 0x00;
-
-
-		payload[sizeof(SIMPLE_DESC_RESP_HEADER) + sizeof(SIMPLE_DESCR_HEADER)] = inputClusterCount;
-
-
-		uint16_t* pointer16;
-
-		pointer16 = (uint16_t*)&payload[sizeof(SIMPLE_DESC_RESP_HEADER) + sizeof(SIMPLE_DESCR_HEADER) + 1];
-
-		*pointer16 = 0x0000;// 33;// 0x0021;
-		payload[1 + sizeof(SIMPLE_DESC_RESP_HEADER) + sizeof(SIMPLE_DESCR_HEADER) + inputClusterCount * 2] = outputClusterCount;
-
-
-		pointer16 = (uint16_t*)&payload[2 + sizeof(SIMPLE_DESC_RESP_HEADER) + sizeof(SIMPLE_DESCR_HEADER) + inputClusterCount * 2];
-		*pointer16 = 0x0019; //33;// 0x0022;
-
-		resp_header->Length = sizeof(SIMPLE_DESCR_HEADER) + clusterListLength;
-		resp_header->NWKAddrOfInterest = req->NWKAddrOfInterest;
-		resp_header->Status = ZDO_STATUS_SUCCESS;
-		resp_header->transactionSequenceNumber = req->transactionSequenceNumber;
-
-
+		SerialDebug.print(F("Number of Endpoints: "));
+		SerialDebug.println(this->_endpoints->number);
+		printHex(SerialDebug, this->_endpoints->endpoints[0].endPoint);
 		SerialDebug.println();
-		SerialDebug.print(F("Seq num 0x"));
-		printHex(SerialDebug, payload[0]); //SeqNum
-		SerialDebug.println();
-		SerialDebug.print(F("status 0x"));
-		printHex(SerialDebug, payload[1]); //Status
-		SerialDebug.println();
-		SerialDebug.print(F("addr16 0x"));
-		printHex(SerialDebug, *((uint16_t*)&payload[2])); //16bit Addr
-		SerialDebug.println();
-		SerialDebug.print(F("length 0x"));
-		printHex(SerialDebug, payload[4]); //Length
-		SerialDebug.println();
-		SerialDebug.print(F("endpoint 0x"));
-		printHex(SerialDebug, payload[5]); //Endpoint
-		SerialDebug.println();
-		SerialDebug.print(F("prof ident 0x"));
-		printHex(SerialDebug, *((uint16_t*)&payload[6])); //prof Ident
-		SerialDebug.println();
-		SerialDebug.print(F("dev ident 0x"));
-		printHex(SerialDebug, *((uint16_t*)&payload[8])); //dev Ident
-		SerialDebug.println();
-		SerialDebug.print(F("version 0x"));
-		printHex(SerialDebug, uint8_t(payload[10] & 0xf)); //Version
-		SerialDebug.println();
-		SerialDebug.print(F("icc "));
-		SerialDebug.print(payload[11]); //input cluster count
-		SerialDebug.println();
-		SerialDebug.print(F("ic1 0x"));
-		printHex(SerialDebug, *((uint16_t*)&payload[12])); //input cluster 1
-		SerialDebug.println();
-		SerialDebug.print(F("occ "));
-		SerialDebug.print(payload[14]); //output cluster count
-		SerialDebug.println();
-		SerialDebug.print(F("oc1 0x"));
-		printHex(SerialDebug, *((uint16_t*)&payload[15])); //output cluster 1
+		printHex(SerialDebug, this->_endpoints->endpoints[1].endPoint);
 		SerialDebug.println();
 
+		//TODO: own method/function
+		for (int i = 0; i < _endpoints->number; i++) {
+			SerialDebug.print(F("Comparing ("));
+			printHex(SerialDebug, epList[i].endPoint);
+			SerialDebug.print(F(" <-> "));
+			printHex(SerialDebug, req->EndPoint);
+			SerialDebug.print(F(" )"));
+			SerialDebug.println();
+			if (epList[i].endPoint == req->EndPoint) {
+				endpoint = epList[i];
+				found = true;
+				break;
+			}
+		}
+
+		if (!found) return;
+		
+		//SerialDebug.println(F("OK"));
+
+		uint8_t totalLength;
+		auto payload = createPayload(req, endpoint,totalLength);
+		SerialDebug.println();
+		SerialDebug.print(F("Total Length "));
+		SerialDebug.println(totalLength);
+		printSimpleDescrResponse(payload);
 
 		ZBExplicitTxRequest tx(rx.getRemoteAddress64(), payload, totalLength);
 		tx.setSrcEndpoint(WPAN_ENDPOINT_ZDO);
@@ -264,13 +232,6 @@ struct ZDOHandler {
 
 		delete[] payload;
 		
-		SerialDebug.print(F("Number of Endpoints: "));
-		SerialDebug.println(this->_endpoints->number);
-		printHex(SerialDebug, this->_endpoints->endpoints[0].endPoint);
-		SerialDebug.println();
-		printHex(SerialDebug, this->_endpoints->endpoints[1].endPoint);
-		SerialDebug.println();
-
 		SimpleDescriptor_t zDescr;
 		zDescr.EndPoint = 0x01;
 		zDescr.AppProfId = 0x0104;
@@ -278,44 +239,105 @@ struct ZDOHandler {
 		zDescr.AppDeviceId = 0x0100;
 		zDescr.EndPoint = 0x01;
 		zDescr.AppNumInClusters = 1;
-		zDescr.AppNumOutClusters = 1;
-		//delete[] payload.ActiveEPList;
+		zDescr.AppNumOutClusters = 1;		
 	};
 
-	void createPayload() {
+	uint8_t* createPayload(const SIMPLE_DESC_REQ* req, const EndPointDesc_t& endpoint, uint8_t& oTotalLength) {
+
+
+		uint8_t clusterListLength = (2 + endpoint.simpleDesc->AppNumInClusters * 2 +
+			endpoint.simpleDesc->AppNumOutClusters * 2);
+		oTotalLength = sizeof(SIMPLE_DESCR_HEADER) + sizeof(SIMPLE_DESC_RESP_HEADER) + clusterListLength;
+
+		uint8_t* payload = new uint8_t[oTotalLength];
+		SIMPLE_DESC_RESP_HEADER* resp_header = (SIMPLE_DESC_RESP_HEADER*)&payload[0];
+		SIMPLE_DESCR_HEADER* desc_header = (SIMPLE_DESCR_HEADER*)&payload[sizeof(SIMPLE_DESC_RESP_HEADER)];
+
+		desc_header->Endpoint = req->EndPoint;
+
+		desc_header->ApplicationProfileIdentifier = endpoint.simpleDesc->AppProfId;
+		desc_header->ApplicationDeviceIdentifier = endpoint.simpleDesc->AppDeviceId;
+
+		desc_header->ApplicationDeviceVersion = endpoint.simpleDesc->AppDevVer;
+		payload[sizeof(SIMPLE_DESC_RESP_HEADER) + sizeof(SIMPLE_DESCR_HEADER)] = endpoint.simpleDesc->AppNumInClusters;
+
+		uint16_t* pointer16;
+
+		for (int i = 0; i < endpoint.simpleDesc->AppNumInClusters; i++) {
+			pointer16 = (uint16_t*)&payload[sizeof(SIMPLE_DESC_RESP_HEADER) + sizeof(SIMPLE_DESCR_HEADER) + 1 + i*2];
+			*pointer16 = endpoint.simpleDesc->pAppInClusterList[i];
+	/*		SerialDebug.print(F("Setting ic:"));
+			printHex(SerialDebug, endpoint.simpleDesc->pAppInClusterList[i]);
+			SerialDebug.println();*/
+		}
+		payload[1 + sizeof(SIMPLE_DESC_RESP_HEADER) + sizeof(SIMPLE_DESCR_HEADER) + endpoint.simpleDesc->AppNumInClusters * 2] = endpoint.simpleDesc->AppNumOutClusters;
+
+		for (int i = 0; i < endpoint.simpleDesc->AppNumOutClusters; i++) {
+			pointer16 = (uint16_t*)&payload[2 + sizeof(SIMPLE_DESC_RESP_HEADER) + sizeof(SIMPLE_DESCR_HEADER) + endpoint.simpleDesc->AppNumInClusters * 2 + i*2];
+			*pointer16 =  endpoint.simpleDesc->pAppOutClusterList[i];
+			/*SerialDebug.print(F("Setting oc:"));
+			printHex(SerialDebug, endpoint.simpleDesc->pAppOutClusterList[i]); 
+			SerialDebug.println();*/
+		}
+
+		resp_header->Length = sizeof(SIMPLE_DESCR_HEADER) + clusterListLength;
+		resp_header->NWKAddrOfInterest = req->NWKAddrOfInterest;
+		resp_header->Status = ZDO_STATUS_SUCCESS;
+		resp_header->transactionSequenceNumber = req->transactionSequenceNumber;
+		return payload;
+	}
+
+	void printSimpleDescrResponse(uint8_t* resp) {
+		SerialDebug.println();
+		SerialDebug.print(F("Seq num 0x"));
+		printHex(SerialDebug, resp[0]); //SeqNum
+		SerialDebug.println();
+		SerialDebug.print(F("Status 0x"));
+		printHex(SerialDebug, resp[1]); //Status
+		SerialDebug.println();
+		SerialDebug.print(F("Addr16 0x"));
+		printHex(SerialDebug, *((uint16_t*)&resp[2])); //16bit Addr
+		SerialDebug.println();
+		SerialDebug.print(F("Length 0x"));
+		printHex(SerialDebug, resp[4]); //Length
+		SerialDebug.println();
+		SerialDebug.print(F("Endpoint 0x"));
+		printHex(SerialDebug, resp[5]); //Endpoint
+		SerialDebug.println();
+		SerialDebug.print(F("Prof ident 0x"));
+		printHex(SerialDebug, *((uint16_t*)&resp[6])); //prof Ident
+		SerialDebug.println();
+		SerialDebug.print(F("Dev ident 0x"));
+		printHex(SerialDebug, *((uint16_t*)&resp[8])); //dev Ident
+		SerialDebug.println();
+		SerialDebug.print(F("Version 0x"));
+		printHex(SerialDebug, uint8_t(resp[10] & 0xf)); //Version
+		SerialDebug.println();
+		SerialDebug.print(F("Input Cluster Count:"));
+		SerialDebug.print(resp[11]); //input cluster count
+		SerialDebug.println();
+		uint8_t icc = resp[11];
+		for (int i = 0; i < icc; i++) {
+			SerialDebug.print(F(" Input Cluster "));
+			SerialDebug.print(i+1);
+			SerialDebug.print(F(": 0x"));
+			printHex(SerialDebug, *((uint16_t*)&resp[12+i*2])); //input cluster 1
+			SerialDebug.println();
+		}
+		SerialDebug.print(F("Output Cluster Count "));
+		SerialDebug.print(resp[12 + icc*2]); //output cluster count
+		SerialDebug.println();
 		
-		uint8_t clusterListLength = (2 + _endpoints->endpoints[0]->simpleDesc->AppNumInClusters * 2 + 
-			_endpoints->endpoints[0]->simpleDesc->AppNumOutClusters * 2);
-		//uint8_t totalLength = sizeof(SIMPLE_DESCR_HEADER) + sizeof(SIMPLE_DESC_RESP_HEADER) + clusterListLength;
+		uint8_t occ = resp[12 + icc*2];
+		for (int i = 0; i < occ; i++) {
+			SerialDebug.print(F(" Output Cluster "));
+			SerialDebug.print(i+1);
+			SerialDebug.print(F(": 0x"));
+			printHex(SerialDebug, *((uint16_t*)&resp[12 + icc*2 + 1 + i*2])); //output cluster 1
+			SerialDebug.println();
+		}
+		SerialDebug.println();
 
-		//uint8_t* payload = new uint8_t[totalLength];
-		//SIMPLE_DESC_RESP_HEADER* resp_header = (SIMPLE_DESC_RESP_HEADER*)&payload[0];
-		//SIMPLE_DESCR_HEADER* desc_header = (SIMPLE_DESCR_HEADER*)&payload[sizeof(SIMPLE_DESC_RESP_HEADER)];
-
-		//desc_header->Endpoint = req->EndPoint;
-
-		//desc_header->ApplicationProfileIdentifier = 0x0104;// 41440;// 0x0014;
-
-		//desc_header->ApplicationDeviceIdentifier = 0x0100; //97;// 0x0014;
-
-		//desc_header->ApplicationDeviceVersion = 0x00;
-		//payload[sizeof(SIMPLE_DESC_RESP_HEADER) + sizeof(SIMPLE_DESCR_HEADER)] = inputClusterCount;
-
-		//uint16_t* pointer16;
-
-		//pointer16 = (uint16_t*)&payload[sizeof(SIMPLE_DESC_RESP_HEADER) + sizeof(SIMPLE_DESCR_HEADER) + 1];
-
-		//*pointer16 = 0x0000;// 33;// 0x0021;
-		//payload[1 + sizeof(SIMPLE_DESC_RESP_HEADER) + sizeof(SIMPLE_DESCR_HEADER) + inputClusterCount * 2] = outputClusterCount;
-
-
-		//pointer16 = (uint16_t*)&payload[2 + sizeof(SIMPLE_DESC_RESP_HEADER) + sizeof(SIMPLE_DESCR_HEADER) + inputClusterCount * 2];
-		//*pointer16 = 0x0019; //33;// 0x0022;
-
-		//resp_header->Length = sizeof(SIMPLE_DESCR_HEADER) + clusterListLength;
-		//resp_header->NWKAddrOfInterest = req->NWKAddrOfInterest;
-		//resp_header->Status = ZDO_STATUS_SUCCESS;
-		//resp_header->transactionSequenceNumber = req->transactionSequenceNumber;
 	}
 };
 

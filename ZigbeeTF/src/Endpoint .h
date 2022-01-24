@@ -5,8 +5,8 @@ typedef uint8_t zEndPoint_t;
 typedef uint16_t zProfileId_t;
 typedef uint16_t zDeviceId_t;
 typedef uint8_t zCounter_t;
-typedef uint8_t cId_t;
-typedef uint8_t cOut_t;
+typedef uint16_t cId_t;
+typedef uint16_t cOut_t;
 
 #if __BYTE_ORDER__ != __ORDER_LITTLE_ENDIAN__
 #endif
@@ -32,7 +32,7 @@ struct SimpleDescriptor_t
 
 typedef struct
 {
-	uint8_t endPoint;//Endpoint number 1-240 	
+	zEndPoint_t endPoint;//Endpoint number 1-240 	
 	SimpleDescriptor_t* simpleDesc;//simple descriptor 	
 	uint8_t flags;
 } EndPointDesc_t;//endpoint descriptor 

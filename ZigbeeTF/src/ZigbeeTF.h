@@ -57,6 +57,8 @@ bool matchZdoReply_(ZBExplicitRxResponse& rx, uintptr_t data);
 #define PROFILE_ZDO_STRING F("ZDO")
 #define PROFILE_UNHANDLED_STRING F("UKN")
 
+//#define HEADER_VERBOSE;
+
 template<int nOfEndpoints>
 struct ExplicitRxPacketDispatcher {
 	XBeeAddress64 remoteAddr64;
@@ -78,6 +80,13 @@ struct ExplicitRxPacketDispatcher {
 
 	void registerEndpoints(EndpointList_t<nOfEndpoints>& endpoints) {
 		_endpoints = endpoints;		
+		//SerialDebug.print(F("Number of Endpoints: "));
+		//SerialDebug.println(endpoints.number);
+		//printHex(SerialDebug, endpoints.endpoints[0].endPoint);
+		//SerialDebug.println();
+		//printHex(SerialDebug, endpoints.endpoints[1].endPoint);
+		//SerialDebug.println();
+		//SerialDebug.println(endpoints.endpoints[0].simpleDesc->AppNumInClusters);
 		zdoHandler.setEndpointList(&_endpoints);
 	}
 
