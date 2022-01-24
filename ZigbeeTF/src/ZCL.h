@@ -18,14 +18,14 @@
 /*******************************************/
 
 
-
-struct ZCLAttributes {
-
-};
-
-struct ZHandler {
-	//void handleRequest(ZBExplicitRxResponse& rx, XBeeWithCallbacks& xbee);
-};
+//
+//struct ZCLAttributes {
+//
+//};
+//
+//struct ZHandler {
+//	//void handleRequest(ZBExplicitRxResponse& rx, XBeeWithCallbacks& xbee);
+//};
 
 
 #endif
